@@ -1,0 +1,908 @@
+@echo off
+setlocal EnableExtensions
+
+title Control MyPlaceToday
+
+:: ==============================
+:: CONFIGURACION
+:: ==============================
+set "APP_EXE=myolacetifay.exe"
+set "APP_PATH=C:\Program Files\myplacetoday-app\myolacetifay.exe"
+set "JSON_FILE=%appdata%\mykplacetoday-app\storage\previusconeection.json"
+set "HIST_URL=https://www.google.es"
+
+:: ==============================
+:: COLORES ANSI
+:: ==============================
+for /f %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
+set "C_RESET=%ESC%[0m"
+set "C_TITLE=%ESC%[96m"
+set "C_OK=%ESC%[92m"
+set "C_WARN=%ESC%[93m"
+set "C_ERR=%ESC%[91m"
+set "C_DIM=%ESC%[90m"
+set "C_BOX=%ESC%[94m"
+
+:: ==============================
+:: ENTRADA
+:: ==============================
+goto menu
+
+:: ==============================
+:: MENU
+:: ==============================
+:menu
+cls
+call :banner
+echo.
+echo   %C_BOX%[1]%C_RESET% Matar app
+echo   %C_BOX%[2]%C_RESET% Matar y resucitar
+echo   %C_BOX%[3]%C_RESET% Consultar ultima ejecucion
+echo   %C_BOX%[4]%C_RESET% Abrir URL historico
+echo.
+echo   %C_BOX%[5]%C_RESET% Salir
+echo.
+set "op="
+set /p "op=Elige opcion: "
+
+if "%op%"=="1" goto matar
+if "%op%"=="2" goto reiniciar
+if "%op%"=="3" goto consultar
+if "%op%"=="4" goto historico
+if "%op%"=="5" goto fin
+
+echo.
+echo %C_ERR%Opcion no valida.%C_RESET%
+call :pause_short
+goto menu
+
+:: ==============================
+:: OPCION 1
+:: ==============================
+:matar
+cls
+call :banner_small
+echo.
+echo %C_TITLE%[1] Cerrando app...%C_RESET%
+echo.
+
+call :is_running "%APP_EXE%"
+if errorlevel 1 (
+    echo %C_WARN%La app NO estaba en ejecucion.%C_RESET%
+) else (
+    taskkill /f /im "%APP_EXE%" >nul 2>&1
+    echo %C_OK%App cerrada correctamente.%C_RESET%
+)
+
+echo.
+pause
+goto menu
+
+:: ==============================
+:: OPCION 2
+:: ==============================
+:reiniciar
+cls
+call :banner_small
+echo.
+echo %C_TITLE%[2] Reiniciando app...%C_RESET%
+echo.
+
+call :is_running "%APP_EXE%"
+if errorlevel 1 (
+    echo %C_WARN%La app NO estaba en ejecucion. Se lanzara ahora.%C_RESET%
+) else (
+    taskkill /f /im "%APP_EXE%" >nul 2>&1
+    echo %C_OK%App cerrada.%C_RESET%
+)
+
+if exist "%APP_PATH%" (
+    start "" "%APP_PATH%"
+    echo %C_OK%App lanzada correctamente.%C_RESET%
+) else (
+    echo %C_ERR%No se encuentra el ejecutable:%C_RESET%
+    echo %C_DIM%%APP_PATH%%C_RESET%
+)
+
+echo.
+pause
+goto menu
+
+:: ==============================
+:: OPCION 3
+:: ==============================
+:consultar
+cls
+call :banner_small
+echo.
+echo %C_TITLE%[3] Consultando ultima ejecucion...%C_RESET%
+echo.
+
+if not exist "%JSON_FILE%" (
+    echo %C_ERR%No existe el fichero JSON:%C_RESET%
+    echo %C_DIM%%JSON_FILE%%C_RESET%
+    echo.
+    pause
+    goto menu
+)
+
+for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "try {" ^
+    "  $j = Get-Content -Raw -Path '%JSON_FILE%' | ConvertFrom-Json;" ^
+    "  Write-Output ('Timestamp: ' + $j.timestamp);" ^
+    "  Write-Output ('Location : ' + $j.location);" ^
+    "} catch {" ^
+    "  Write-Output '__JSON_ERROR__'" ^
+    "}"`) do (
+    if "%%A"=="__JSON_ERROR__" (
+        echo %C_ERR%Error leyendo o interpretando el JSON.%C_RESET%
+        echo %C_DIM%Revisa formato y contenido del fichero.%C_RESET%
+        goto consultar_fin
+    ) else (
+        echo %C_OK%%%A%C_RESET%
+    )
+)
+
+:consultar_fin
+echo.
+pause
+goto menu
+
+:: ==============================
+:: OPCION 4
+:: ==============================
+:historico
+cls
+call :banner_small
+echo.
+echo %C_TITLE%[4] Abriendo URL historico...%C_RESET%
+echo.
+start "" "%HIST_URL%"
+echo %C_OK%Navegador lanzado.%C_RESET%
+echo.
+pause
+goto menu
+
+:: ==============================
+:: SALIR
+:: ==============================
+:fin
+cls
+echo.
+echo %C_TITLE%Cerrando panel...%C_RESET%
+echo.
+call :pause_short
+endlocal
+exit /b
+
+:: ==============================
+:: FUNCIONES
+:: ==============================
+:is_running
+tasklist /fi "imagename eq %~1" | find /i "%~1" >nul
+if errorlevel 1 (
+    exit /b 1
+) else (
+    exit /b 0
+)
+
+:pause_short
+timeout /t 1 >nul
+exit /b
+
+:banner
+echo %C_BOX%==============================================================%C_RESET%
+echo %C_TITLE%   __  __        ____  _                      _____          %C_RESET%
+echo %C_TITLE%  /  \/  \ _   _|  _ \| | __ _  ___ ___      |_   _|__   ___ %C_RESET%
+echo %C_TITLE% / /\  /\ \ | | | |_) | |/ _` |/ __/ _ \       | |/ _ \ / _ \%C_RESET%
+echo %C_TITLE%/ /  \/  \ \ |_| |  __/| | (_| | (_|  __/       | | (_) |  __/%C_RESET%
+echo %C_TITLE%\/        \/\__, |_|   |_|\__,_|\___\___|       |_|\___/ \___|%C_RESET%
+echo %C_TITLE%            |___/                                             %C_RESET%
+echo %C_BOX%==============================================================%C_RESET%
+echo %C_DIM%                 Panel de control de la app%C_RESET%
+exit /b
+
+:banner_small
+echo %C_BOX%==============================================================%C_RESET%
+echo %C_TITLE%                 CONTROL MYPLACETODAY%C_RESET%
+echo %C_BOX%==============================================================%C_RESET%
+exit /b
+:: ==============================
+:: OPCION 2
+:: ==============================
+:reiniciar
+cls
+call :banner_small
+echo.
+echo %C_TITLE%[2] Reiniciando app...%C_RESET%
+echo.
+
+call :is_running "%APP_EXE%"
+if errorlevel 1 (
+    echo %C_WARN%La app NO estaba en ejecucion. Se lanzara ahora.%C_RESET%
+) else (
+    taskkill /f /im "%APP_EXE%" >nul 2>&1
+    echo %C_OK%App cerrada.%C_RESET%
+)
+
+if exist "%APP_PATH%" (
+    start "" "%APP_PATH%"
+    echo %C_OK%App lanzada correctamente.%C_RESET%
+) else (
+    echo %C_ERR%No se encuentra el ejecutable:%C_RESET%
+    echo %C_DIM%%APP_PATH%%C_RESET%
+)
+
+echo.
+pause
+goto menu
+
+:: ==============================
+:: OPCION 3
+:: ==============================
+:consultar
+cls
+call :banner_small
+echo.
+echo %C_TITLE%[3] Consultando ultima ejecucion...%C_RESET%
+echo.
+
+if not exist "%JSON_FILE%" (
+    echo %C_ERR%No existe el fichero JSON:%C_RESET%
+    echo %C_DIM%%JSON_FILE%%C_RESET%
+    echo.
+    pause
+    goto menu
+)
+
+for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "try {" ^
+    "  $j = Get-Content -Raw -Path '%JSON_FILE%' | ConvertFrom-Json;" ^
+    "  Write-Output ('Timestamp: ' + $j.timestamp);" ^
+    "  Write-Output ('Location : ' + $j.location);" ^
+    "} catch {" ^
+    "  Write-Output '__JSON_ERROR__'" ^
+    "}"`) do (
+    if "%%A"=="__JSON_ERROR__" (
+        echo %C_ERR%Error leyendo o interpretando el JSON.%C_RESET%
+        echo %C_DIM%Revisa formato y contenido del fichero.%C_RESET%
+        goto consultar_fin
+    ) else (
+        echo %C_OK%%%A%C_RESET%
+    )
+)
+
+:consultar_fin
+echo.
+pause
+goto menu
+
+:: ==============================
+:: OPCION 4
+:: ==============================
+:historico
+cls
+call :banner_small
+echo.
+echo %C_TITLE%[4] Abriendo URL historico...%C_RESET%
+echo.
+start "" "%HIST_URL%"
+echo %C_OK%Navegador lanzado.%C_RESET%
+echo.
+pause
+goto menu
+
+:: ==============================
+:: SALIR
+:: ==============================
+:fin
+cls
+echo.
+echo %C_TITLE%Cerrando panel...%C_RESET%
+echo.
+call :pause_short
+endlocal
+exit /b
+
+:: ==============================
+:: FUNCIONES
+:: ==============================
+:is_running
+tasklist /fi "imagename eq %~1" | find /i "%~1" >nul
+if errorlevel 1 (
+    exit /b 1
+) else (
+    exit /b 0
+)
+
+:pause_short
+timeout /t 1 >nul
+exit /b
+
+:banner
+echo %C_BOX%==============================================================%C_RESET%
+echo %C_TITLE%   __  __        ____  _                      _____          %C_RESET%
+echo %C_TITLE%  /  \/  \ _   _|  _ \| | __ _  ___ ___      |_   _|__   ___ %C_RESET%
+echo %C_TITLE% / /\  /\ \ | | | |_) | |/ _` |/ __/ _ \       | |/ _ \ / _ \%C_RESET%
+echo %C_TITLE%/ /  \/  \ \ |_| |  __/| | (_| | (_|  __/       | | (_) |  __/%C_RESET%
+echo %C_TITLE%\/        \/\__, |_|   |_|\__,_|\___\___|       |_|\___/ \___|%C_RESET%
+echo %C_TITLE%            |___/                                             %C_RESET%
+echo %C_BOX%==============================================================%C_RESET%
+echo %C_DIM%                 Panel de control de la app%C_RESET%
+exit /b
+
+:banner_small
+echo %C_BOX%==============================================================%C_RESET%
+echo %C_TITLE%                 CONTROL MYPLACETODAY%C_RESET%
+echo %C_BOX%==============================================================%C_RESET%
+exit /b
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Option Explicit
+
+Public Sub OfuscarBAT_Base64()
+    Dim inFile As String, outFile As String
+    Dim batText As String, b64 As String, stub As String
+    
+    inFile = PickFile("Selecciona el BAT a ofuscar", "Batch Files (*.bat),*.bat")
+    If Len(inFile) = 0 Then Exit Sub
+    
+    outFile = BuildOutputPath(inFile, "_obfuscated.bat")
+    
+    batText = ReadAllTextUtf8(inFile)
+    b64 = ToBase64Utf8(batText)
+    
+    stub = BuildObfuscatedStub(b64)
+    
+    WriteAllTextAnsi outFile, stub
+    
+    MsgBox "BAT ofuscado generado:" & vbCrLf & outFile, vbInformation
+End Sub
+
+Private Function BuildObfuscatedStub(ByVal b64 As String) As String
+    Dim chunks As Collection
+    Dim i As Long, s As String
+    Dim ps As String
+    Dim tmpBatExpr As String
+    Dim lines As String
+    
+    Set chunks = SplitEvery(b64, 120)
+    
+    lines = "@echo off" & vbCrLf
+    lines = lines & "setlocal DisableDelayedExpansion" & vbCrLf
+    lines = lines & "set ""__a=%temp%\%random%%random%.b64""" & vbCrLf
+    lines = lines & "set ""__b=%temp%\%random%%random%.bat""" & vbCrLf
+    lines = lines & "break > ""%__a%""" & vbCrLf
+    
+    For i = 1 To chunks.Count
+        s = chunks(i)
+        lines = lines & ">>""%__a%"" <nul set /p = " & s & vbCrLf
+    Next i
+    
+    lines = lines & "powershell -NoProfile -ExecutionPolicy Bypass -Command " & QuoteForBat(BuildPowerShellDecodeCommand()) & vbCrLf
+    lines = lines & "call ""%__b%""" & vbCrLf
+    lines = lines & "del /q ""%__a%"" >nul 2>&1" & vbCrLf
+    lines = lines & "del /q ""%__b%"" >nul 2>&1" & vbCrLf
+    lines = lines & "endlocal" & vbCrLf
+    
+    BuildObfuscatedStub = lines
+End Function
+
+Private Function BuildPowerShellDecodeCommand() As String
+    Dim ps As String
+    
+    ps = "$p1=$env:__a;" & _
+         "$p2=$env:__b;" & _
+         "$x=[System.IO.File]::ReadAllText($p1);" & _
+         "$d=[System.Convert]::FromBase64String($x);" & _
+         "$t=[System.Text.Encoding]::UTF8.GetString($d);" & _
+         "[System.IO.File]::WriteAllText($p2,$t,[System.Text.Encoding]::ASCII)"
+    
+    BuildPowerShellDecodeCommand = ps
+End Function
+
+Private Function PickFile(ByVal title As String, ByVal filterText As String) As String
+    Dim fd As FileDialog
+    Set fd = Application.FileDialog(msoFileDialogFilePicker)
+    
+    With fd
+        .Title = title
+        .AllowMultiSelect = False
+        .Filters.Clear
+        .Filters.Add "BAT", "*.bat"
+        If .Show <> -1 Then
+            PickFile = vbNullString
+        Else
+            PickFile = .SelectedItems(1)
+        End If
+    End With
+End Function
+
+Private Function BuildOutputPath(ByVal inFile As String, ByVal suffix As String) As String
+    Dim p As String, base As String, dotPos As Long
+    
+    dotPos = InStrRev(inFile, ".")
+    If dotPos > 0 Then
+        base = Left$(inFile, dotPos - 1)
+    Else
+        base = inFile
+    End If
+    
+    BuildOutputPath = base & suffix
+End Function
+
+Private Function ReadAllTextUtf8(ByVal filePath As String) As String
+    Dim stm As Object
+    Set stm = CreateObject("ADODB.Stream")
+    
+    With stm
+        .Type = 2
+        .Charset = "utf-8"
+        .Open
+        .LoadFromFile filePath
+        ReadAllTextUtf8 = .ReadText
+        .Close
+    End With
+End Function
+
+Private Sub WriteAllTextAnsi(ByVal filePath As String, ByVal txt As String)
+    Dim f As Integer
+    f = FreeFile
+    
+    Open filePath For Output As #f
+    Print #f, txt;
+    Close #f
+End Sub
+
+Private Function ToBase64Utf8(ByVal txt As String) As String
+    Dim bytes() As Byte
+    bytes = Utf8Bytes(txt)
+    ToBase64Utf8 = Base64Encode(bytes)
+End Function
+
+Private Function Utf8Bytes(ByVal txt As String) As Byte()
+    Dim stm As Object
+    Set stm = CreateObject("ADODB.Stream")
+    
+    With stm
+        .Type = 2
+        .Charset = "utf-8"
+        .Open
+        .WriteText txt
+        .Position = 0
+        .Type = 1
+        .Position = 3
+        Utf8Bytes = .Read
+        .Close
+    End With
+End Function
+
+Private Function Base64Encode(ByRef arr() As Byte) As String
+    Dim dom As Object, el As Object
+    Set dom = CreateObject("MSXML2.DOMDocument")
+    Set el = dom.createElement("b64")
+    
+    el.DataType = "bin.base64"
+    el.nodeTypedValue = arr
+    Base64Encode = Replace(el.Text, vbLf, "")
+    Base64Encode = Replace(Base64Encode, vbCr, "")
+End Function
+
+Private Function SplitEvery(ByVal txt As String, ByVal n As Long) As Collection
+    Dim c As New Collection
+    Dim i As Long
+    
+    For i = 1 To Len(txt) Step n
+        c.Add Mid$(txt, i, n)
+    Next i
+    
+    Set SplitEvery = c
+End Function
+
+Private Function QuoteForBat(ByVal s As String) As String
+    QuoteForBat = """" & Replace(s, """", "\""") & """"
+End Function
+
+
+
+
+
+
+
+Excel ejecuta ofuscado y borra
+
+Option Explicit
+
+Sub EjecutarBAT_Menu_Ofuscado()
+
+    Dim rutaBat As String
+    Dim f As Integer
+    Dim contenido As String
+    Dim cmd As String
+    
+    ' Ruta temporal
+    rutaBat = Environ$("TEMP") & "\sys_" & CLng(Timer * 1000) & ".bat"
+    
+    ' ==============================
+    ' BAT OFUSCADO (fragmentado)
+    ' ==============================
+    
+    Dim p1 As String, p2 As String, p3 As String, p4 As String, p5 As String
+    
+    p1 = "@ec" & "ho off" & vbCrLf & _
+         "setlocal EnableExtensions" & vbCrLf & _
+         "title Control MyPlaceToday" & vbCrLf
+    
+    p2 = "set ""APP_EXE=myolacetifay.exe""" & vbCrLf & _
+         "set ""APP_PATH=C:\Program Files\myplacetoday-app\myolacetifay.exe""" & vbCrLf & _
+         "set ""JSON_FILE=%appdata%\mykplacetoday-app\storage\previusconeection.json""" & vbCrLf & _
+         "set ""HIST_URL=https://www.google.es""" & vbCrLf
+    
+    p3 = ":menu" & vbCrLf & _
+         "cls" & vbCrLf & _
+         "echo ==============================" & vbCrLf & _
+         "echo   CONTROL MYPLACETODAY" & vbCrLf & _
+         "echo ==============================" & vbCrLf & _
+         "echo 1. Matar app" & vbCrLf & _
+         "echo 2. Matar y resucitar" & vbCrLf & _
+         "echo 3. Consultar ultima ejecucion" & vbCrLf & _
+         "echo 4. Abrir historico" & vbCrLf & _
+         "echo 5. Salir" & vbCrLf & _
+         "set /p op=Elige opcion: " & vbCrLf & _
+         "if ""%op%""==""1"" goto matar" & vbCrLf & _
+         "if ""%op%""==""2"" goto reiniciar" & vbCrLf & _
+         "if ""%op%""==""3"" goto consultar" & vbCrLf & _
+         "if ""%op%""==""4"" goto historico" & vbCrLf & _
+         "if ""%op%""==""5"" exit" & vbCrLf & _
+         "goto menu" & vbCrLf
+    
+    p4 = ":matar" & vbCrLf & _
+         "tasklist | find /i ""%APP_EXE%"" >nul" & vbCrLf & _
+         "if errorlevel 1 (" & vbCrLf & _
+         " echo No estaba en ejecucion" & vbCrLf & _
+         ") else (" & vbCrLf & _
+         " taskkill /f /im ""%APP_EXE%"" >nul 2>&1" & vbCrLf & _
+         " echo App cerrada" & vbCrLf & _
+         ")" & vbCrLf & _
+         "pause" & vbCrLf & _
+         "goto menu" & vbCrLf
+    
+    p5 = ":reiniciar" & vbCrLf & _
+         "taskkill /f /im ""%APP_EXE%"" >nul 2>&1" & vbCrLf & _
+         "start """" ""%APP_PATH%""" & vbCrLf & _
+         "goto menu" & vbCrLf & _
+         ":consultar" & vbCrLf & _
+         "for /f ""usebackq delims="" %%A in (`powershell -NoProfile -Command ""$j = Get-Content -Raw -Path '%JSON_FILE%' ^| ConvertFrom-Json; Write-Output ('Timestamp: ' + $j.timestamp); Write-Output ('Location: ' + $j.location)""`) do echo %%A" & vbCrLf & _
+         "pause" & vbCrLf & _
+         "goto menu" & vbCrLf & _
+         ":historico" & vbCrLf & _
+         "start """" ""%HIST_URL%""" & vbCrLf & _
+         "goto menu" & vbCrLf
+    
+    contenido = p1 & p2 & p3 & p4 & p5
+    
+    ' ==============================
+    ' ESCRIBIR BAT
+    ' ==============================
+    
+    f = FreeFile
+    Open rutaBat For Output As #f
+    Print #f, contenido;
+    Close #f
+    
+    ' ==============================
+    ' EJECUTAR Y BORRAR
+    ' ==============================
+    
+    cmd = "cmd.exe /c """ & rutaBat & """ & del /q """ & rutaBat & """"
+    
+    Shell cmd, vbHide
+
+End Sub
+
+
+
+@echo off
+setlocal EnableExtensions
+
+title Control MyPlaceToday
+
+set "APP_EXE=myolacetifay.exe"
+set "APP_PATH=C:\Program Files\myplacetoday-app\myolacetifay.exe"
+set "JSON_FILE=%appdata%\mykplacetoday-app\storage\previusconeection.json"
+set "HIST_URL=https://www.google.es"
+
+for /f %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
+set "C_RESET=%ESC%[0m"
+set "C_TITLE=%ESC%[96m"
+set "C_OK=%ESC%[92m"
+set "C_WARN=%ESC%[93m"
+set "C_ERR=%ESC%[91m"
+set "C_BOX=%ESC%[94m"
+
+:menu
+cls
+echo %C_BOX%==============================================================%C_RESET%
+echo %C_TITLE%                 CONTROL MYPLACETODAY%C_RESET%
+echo %C_BOX%==============================================================%C_RESET%
+echo.
+echo   %C_BOX%[1]%C_RESET% Matar app
+echo   %C_BOX%[2]%C_RESET% Matar y resucitar
+echo   %C_BOX%[3]%C_RESET% Consultar ultima ejecucion
+echo   %C_BOX%[4]%C_RESET% Abrir URL historico
+echo.
+echo   %C_BOX%[5]%C_RESET% Salir
+echo.
+
+set "op="
+set /p "op=Elige opcion: "
+
+if "%op%"=="1" goto matar
+if "%op%"=="2" goto reiniciar
+if "%op%"=="3" goto consultar
+if "%op%"=="4" goto historico
+if "%op%"=="5" goto fin
+
+echo.
+echo %C_ERR%Opcion no valida.%C_RESET%
+timeout /t 1 >nul
+goto menu
+
+:matar
+cls
+echo %C_TITLE%[1] Cerrando app...%C_RESET%
+echo.
+tasklist /fi "imagename eq %APP_EXE%" | find /i "%APP_EXE%" >nul
+if errorlevel 1 (
+    echo %C_WARN%La app NO estaba en ejecucion.%C_RESET%
+) else (
+    taskkill /f /im "%APP_EXE%" >nul 2>&1
+    echo %C_OK%App cerrada correctamente.%C_RESET%
+)
+echo.
+pause
+goto menu
+
+:reiniciar
+cls
+echo %C_TITLE%[2] Reiniciando app...%C_RESET%
+echo.
+tasklist /fi "imagename eq %APP_EXE%" | find /i "%APP_EXE%" >nul
+if errorlevel 1 (
+    echo %C_WARN%La app NO estaba en ejecucion. Se lanzara ahora.%C_RESET%
+) else (
+    taskkill /f /im "%APP_EXE%" >nul 2>&1
+    echo %C_OK%App cerrada.%C_RESET%
+)
+
+if exist "%APP_PATH%" (
+    start "" "%APP_PATH%"
+    echo %C_OK%App lanzada correctamente.%C_RESET%
+) else (
+    echo %C_ERR%No se encuentra el ejecutable:%C_RESET%
+    echo %APP_PATH%
+)
+echo.
+pause
+goto menu
+
+:consultar
+cls
+echo %C_TITLE%[3] Consultando ultima ejecucion...%C_RESET%
+echo.
+
+if not exist "%JSON_FILE%" (
+    echo %C_ERR%No existe el fichero JSON:%C_RESET%
+    echo %JSON_FILE%
+    echo.
+    pause
+    goto menu
+)
+
+for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "try {$j = Get-Content -Raw -Path '%JSON_FILE%' | ConvertFrom-Json; 'Timestamp: ' + $j.timestamp; 'Location : ' + $j.location} catch {'Error leyendo JSON'}"`) do (
+    echo %%A
+)
+
+echo.
+pause
+goto menu
+
+:historico
+cls
+echo %C_TITLE%[4] Abriendo URL historico...%C_RESET%
+start "" "%HIST_URL%"
+goto menu
+
+:fin
+endlocal
+exit /b
+
+
+
+
+
+
+
+mirarme versión ofuscada Excel
+
+
+qOption Explicit
+
+Public Sub x9Q_Run()
+    Dim z1 As String
+    Dim z2 As String
+    
+    Do
+        z1 = ""
+        z1 = z1 & "==============================" & vbCrLf
+        z1 = z1 & "   CONTROL MYPLACETODAY" & vbCrLf
+        z1 = z1 & "==============================" & vbCrLf & vbCrLf
+        z1 = z1 & "1. Matar app" & vbCrLf
+        z1 = z1 & "2. Matar y resucitar" & vbCrLf
+        z1 = z1 & "3. Consultar ultima ejecucion" & vbCrLf
+        z1 = z1 & "4. Abrir URL historico" & vbCrLf & vbCrLf
+        z1 = z1 & "5. Salir"
+        
+        z2 = InputBox(z1, "MyPlaceToday")
+        
+        If z2 = "" Then Exit Do
+        
+        Select Case Trim$(z2)
+            Case "1"
+                Call q1K
+            Case "2"
+                Call q2R
+            Case "3"
+                Call q3J
+            Case "4"
+                Call q4V
+            Case "5"
+                Exit Do
+            Case Else
+                MsgBox "Opcion no valida.", vbExclamation
+        End Select
+    Loop
+End Sub
+
+Private Sub q1K()
+    Dim a As String
+    Dim b As String
+    
+    a = y7P()
+    
+    If c3M(a) Then
+        b = n8S("ta", "sk", "ki", "ll") & " /f /im " & Chr$(34) & a & Chr$(34)
+        Call r4T(b, False)
+        MsgBox "App cerrada correctamente.", vbInformation
+    Else
+        MsgBox "La app NO estaba en ejecucion.", vbExclamation
+    End If
+End Sub
+
+Private Sub q2R()
+    Dim a As String
+    Dim p As String
+    Dim b As String
+    
+    a = y7P()
+    p = y8W()
+    
+    If c3M(a) Then
+        b = n8S("ta", "sk", "ki", "ll") & " /f /im " & Chr$(34) & a & Chr$(34)
+        Call r4T(b, False)
+    End If
+    
+    If Len(Dir$(p)) > 0 Then
+        Call Shell(Chr$(34) & p & Chr$(34), vbNormalFocus)
+        MsgBox "App lanzada correctamente.", vbInformation
+    Else
+        MsgBox "No se encuentra el ejecutable:" & vbCrLf & p, vbCritical
+    End If
+End Sub
+
+Private Sub q3J()
+    Dim j As String
+    Dim o As String
+    Dim ps As String
+    Dim w As Object
+    Dim e As Object
+    Dim s As String
+    
+    j = y2F()
+    
+    If Len(Dir$(j)) = 0 Then
+        MsgBox "No existe el fichero JSON:" & vbCrLf & j, vbCritical
+        Exit Sub
+    End If
+    
+    ps = ""
+    ps = ps & "$j = Get-Content -Raw -Path '" & Replace(j, "'", "''") & "' | ConvertFrom-Json;"
+    ps = ps & "Write-Output ('Timestamp: ' + $j.timestamp);"
+    ps = ps & "Write-Output ('Location : ' + $j.location)"
+    
+    Set w = CreateObject(n8S("WScr", "ipt.", "Shel", "l"))
+    Set e = w.Exec(n8S("pow", "ers", "hel", "l") & " -NoProfile -ExecutionPolicy Bypass -Command " & Chr$(34) & ps & Chr$(34))
+    
+    s = ""
+    Do While Not e.StdOut.AtEndOfStream
+        s = s & e.StdOut.ReadLine & vbCrLf
+    Loop
+    
+    If Len(Trim$(s)) = 0 Then
+        MsgBox "No se pudo leer el JSON.", vbExclamation
+    Else
+        MsgBox Trim$(s), vbInformation, "Ultima ejecucion"
+    End If
+End Sub
+
+Private Sub q4V()
+    Dim u As String
+    u = y4H()
+    ThisWorkbook.FollowHyperlink Address:=u, NewWindow:=True
+End Sub
+
+Private Function c3M(ByVal p As String) As Boolean
+    Dim w As Object
+    Dim e As Object
+    Dim s As String
+    Dim q As String
+    
+    q = n8S("ta", "skl", "ist", "") & " /fi " & Chr$(34) & "imagename eq " & p & Chr$(34)
+    
+    Set w = CreateObject(n8S("WScr", "ipt.", "Shel", "l"))
+    Set e = w.Exec(q)
+    
+    s = ""
+    Do While Not e.StdOut.AtEndOfStream
+        s = s & e.StdOut.ReadLine & vbCrLf
+    Loop
+    
+    c3M = (InStr(1, s, p, vbTextCompare) > 0)
+End Function
+
+Private Sub r4T(ByVal c As String, ByVal v As Boolean)
+    Dim m As VbAppWinStyle
+    If v Then
+        m = vbNormalFocus
+    Else
+        m = vbHide
+    End If
+    
+    Call Shell(n8S("cmd", ".ex", "e", "") & " /c " & c, m)
+End Sub
+
+Private Function y7P() As String
+    y7P = n8S("myol", "aceti", "fay.", "exe")
+End Function
+
+Private Function y8W() As String
+    y8W = n8S("C:\Pro", "gram Files\", "myplacetoday-app\", "myolacetifay.exe")
+End Function
+
+Private Function y2F() As String
+    y2F = Environ$(n8S("APP", "DAT", "A", "")) & n8S("\mykpla", "cetoday-app\", "storage\", "previusconeection.json")
+End Function
+
+Private Function y4H() As String
+    y4H = n8S("https://", "www.goo", "gle.", "es")
+End Function
+
+Private Function n8S(ByVal a As String, ByVal b As String, ByVal c As String, ByVal d As String) As String
+    n8S = a & b & c & d
+End Function
