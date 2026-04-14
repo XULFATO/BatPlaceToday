@@ -1,3 +1,179 @@
+--ejecución visual----------------------------------------
+
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+mode con: cols=80 lines=30
+title MyPlaceToday ^| Control Center
+
+set "APP_EXE=myolacetifay.exe"
+set "APP_PATH=C:\Program Files\myplacetoday-app\myolacetifay.exe"
+set "JSON_FILE=%appdata%\myplacetoday-app\storage\previusconeection.json"
+set "HIST_URL=https://www.google.es"
+
+set "VBS=%temp%\tw.vbs"
+(
+echo Sub TW(s, col^)
+echo     Dim i
+echo     Dim oShell : Set oShell = CreateObject("WScript.Shell"^)
+echo     oShell.Run "cmd /c color " ^& col, 0, False
+echo     For i = 1 To Len(s^)
+echo         WScript.StdOut.Write Mid(s, i, 1^)
+echo         WScript.Sleep 1
+echo     Next
+echo     WScript.StdOut.WriteBlankLines(1^)
+echo End Sub
+echo TW WScript.Arguments(0^), WScript.Arguments(1^)
+) > "%VBS%"
+
+goto menu
+
+:tw
+cscript //nologo "%VBS%" "%~1" "%~2"
+exit /b
+
+:blink
+<nul set /p "=" & ping -n 1 -w 80 127.0.0.1 >nul
+<nul set /p "=" & ping -n 1 -w 80 127.0.0.1 >nul
+<nul set /p "=" & ping -n 1 -w 80 127.0.0.1 >nul
+<nul set /p "="
+exit /b
+
+:menu
+cls
+color 0A
+echo.
+call :blink
+call :tw "   MYPLACETODAY|Control APP| v1.0" "0A"
+call :tw "   -------------------------------" "08"
+echo.
+call :tw "   +-------------------------------+" "08"
+call :tw "   |  1  Matar MyPlaceToday        |" "0A"
+call :tw "   |  2  Reinicio MyPlaceToday     |" "0A"
+call :tw "   |  3  Consulta ultima ejecucion |" "0A"
+call :tw "   |  4  Abrir historico           |" "0A"
+call :tw "   |  5  Salir                     |" "0A"
+call :tw "   +-------------------------------+" "08"
+echo.
+set /p "op=   > "
+if "!op!"=="1" goto kill
+if "!op!"=="2" goto restart
+if "!op!"=="3" goto status
+if "!op!"=="4" goto web
+if "!op!"=="5" goto salir
+goto menu
+
+
+:kill
+cls
+color 0C
+echo.
+call :blink
+call :tw "   MYPLACETODAY  |  TERMINAR PROCESO" "0C"
+call :tw "   ---------------------------------" "08"
+echo.
+tasklist /fi "imagename eq %APP_EXE%" 2>nul | find /i "%APP_EXE%" >nul
+if errorlevel 1 (
+    call :tw "   La app no estaba en ejecucion." "0E"
+) else (
+    call :tw "   Deteniendo proceso..." "0E"
+    taskkill /f /im "%APP_EXE%" >nul 2>&1
+    call :tw "   Proceso finalizado." "0A"
+)
+echo.
+call :tw "   Pulsa una tecla..." "08"
+pause >nul
+goto menu
+
+
+:restart
+cls
+color 0E
+echo.
+call :blink
+call :tw "   MYPLACETODAY  |  REINICIO CONTROLADO" "0E"
+call :tw "   ------------------------------------" "08"
+echo.
+tasklist /fi "imagename eq %APP_EXE%" 2>nul | find /i "%APP_EXE%" >nul
+if not errorlevel 1 (
+    call :tw "   Deteniendo proceso anterior..." "0E"
+    taskkill /f /im "%APP_EXE%" >nul 2>&1
+)
+if exist "%APP_PATH%" (
+    call :tw "   Iniciando aplicacion..." "0E"
+    start "" "%APP_PATH%"
+    call :tw "   Sistema activo." "0A"
+) else (
+    call :tw "   ERROR: Ruta no encontrada." "0C"
+    call :tw "   %APP_PATH%" "08"
+)
+echo.
+call :tw "   Pulsa una tecla..." "08"
+pause >nul
+goto menu
+
+
+:status
+cls
+color 0B
+echo.
+call :blink
+call :tw "   MYPLACETODAY  |  ESTADO ULTIMA EJECUCION" "0B"
+call :tw "   ----------------------------------------" "08"
+echo.
+if not exist "%JSON_FILE%" (
+    call :tw "   ERROR: Archivo no encontrado." "0C"
+    call :tw "   %JSON_FILE%" "08"
+    echo.
+    call :tw "   Pulsa una tecla..." "08"
+    pause >nul
+    goto menu
+)
+for /f "usebackq tokens=1,* delims=:" %%A in (`findstr /i "timestamp" "%JSON_FILE%"`) do set "_ts=%%B"
+for /f "usebackq tokens=1,* delims=:" %%A in (`findstr /i "location" "%JSON_FILE%"`) do set "_loc=%%B"
+set "_ts=!_ts: =!& set "_ts=!_ts:,=!"& set "_ts=!_ts:"=!"
+set "_loc=!_loc: =!"& set "_loc=!_loc:,=!"& set "_loc=!_loc:"=!"
+call :tw "   Timestamp  :  !_ts!" "0F"
+call :tw "   Location   :  !_loc!" "0F"
+echo.
+call :tw "   Pulsa una tecla..." "08"
+pause >nul
+goto menu
+
+
+:web
+cls
+color 0D
+echo.
+call :blink
+call :tw "   MYPLACETODAY  |  ABRIR HISTORICO" "0D"
+call :tw "   --------------------------------" "08"
+echo.
+start "" "%HIST_URL%"
+call :tw "   Navegador lanzado." "0A"
+echo.
+call :tw "   Pulsa una tecla..." "08"
+pause >nul
+goto menu
+
+
+:salir
+cls
+echo.
+call :tw "   Cerrando sistema..." "08"
+ping -n 2 127.0.0.1 >nul
+del "%VBS%" >nul 2>&1
+exit /b
+
+
+
+
+
+
+
+
+
+
+---------------------------------------------
 @echo off
 setlocal EnableExtensions
 
@@ -906,3 +1082,7 @@ End Function
 Private Function n8S(ByVal a As String, ByVal b As String, ByVal c As String, ByVal d As String) As String
     n8S = a & b & c & d
 End Function
+
+
+
+----------
